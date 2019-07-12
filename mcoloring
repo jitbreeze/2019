@@ -1,0 +1,88 @@
+#include <stdio.h>
+#include <stdlib.h>
+typedef enum { // c언어는 boolean 자료형이 없기때문에 사용자정의로 boolean형을 만듦
+	false = 0,
+	true = 1
+
+}bool;
+
+int n; //노드의 갯수를 입력받는 input size
+int m=0; //m-coloring에서 몇가지 색을 사용할건지 받는 input size.
+int sum=0; // 총 가짓수를 나타내기 위한 전역변수
+bool ok = false; // minimum일때는 출력하지 않기 위해 false로 초기화
+
+bool promising(int *vcolor, int **W, int i) {
+
+	int j;
+	bool result;	
+
+
+	result = true;
+	j = 1;
+
+	while (j<i && result == true) {
+		if (W[i][j] ==1 && vcolor[i] == vcolor[j]) result = false; // 이음선이 존재하지만 앞선 노드와 같은 색깔을 가진다면 유망하지 않다고 판단.
+		j++;// 앞선 행렬들을 쭉 검사.
+	}
+	return result;
+}
+
+
+void coloring(int *vcolor, int **W, int i) {
+	int k;
+	int color;
+
+	if (promising(vcolor,W,i)) {
+		if (i == n) {//마지막 노드까지 유망여부를 판별했다면
+			sum++; //총 가짓수와 minimum을 나타내기 위해 증가.
+			if (ok == true) {//총 가짓수를 나타낸다면 출력 아니라면 출력하지 않음.
+				printf("%d번째 방법 : ", sum);
+				for (k = 1; k <= n; k++) {
+					printf("%d ", vcolor[k]);// k번째 노드에 입혀진 색깔을 출력
+				}
+				printf("\n");
+			}
+		}
+		else {
+			for (color = 1; color <= m; color++) {
+				vcolor[i + 1] = color; // 색깔을 증가하며 인접한지 아닌지를 확인함.
+				coloring(vcolor,W, i + 1); // m개의 색깔로 i+1번째 노드가 유망한지 여부를 판단.
+			}
+		}
+	}
+}
+
+
+
+int main() {
+	int j,k,t; //반복문을 위한 index
+	printf("input size를 입력하세요\n");
+	scanf("%d", &n);
+	int *vcolor = (int *)malloc(sizeof(int)*(n + 1)); //노드는 1...n까지 총 n+1개
+	for (k = 0; k <= n + 1; k++) vcolor[k] = -1; // 노드 초기화
+	int ** W = (int**)malloc(sizeof(int*)*(n + 1));//n+1개
+	for (k = 0; k <= n; k++)
+	{
+		W[k] = (int*)malloc(sizeof(int)*(n + 1));//이음선의 연결여부를 나타내는 W, 사이즈는 n+1개
+	}
+	for (t = 1; t <= n; t++) {
+		printf("@ %d 번째 row : ", t);
+		for (j = 1; j <= n; j++) {
+			scanf("%d", &W[t][j]);// 행렬을 입력받는다. 이어져있으면 1(true), 이어져있지 않다면 0(false)
+		}
+	}
+	for (m = 1; m <= n; m++) {
+		coloring(vcolor, W, 0);
+		if (vcolor[n] != -1) break;//마지막까지 m개의 색깔로 인접하지 않게 색칠이 가능하다면 
+	}
+	printf("@ minimum m : %d개\n", m);//최소의 색깔 m개
+
+	sum = 0; //총 가짓수를 나타낼때 또 사용해야하는데 앞서 minimum을 구하기 위해 sum을 사용했으므로 초기화
+	ok = true; //총 가짓수를 print하기 위해 
+	for (m = 3; m <= n; m++) {
+		coloring(vcolor, W, 0);
+		if (vcolor[n] != -1) break;
+	}
+	printf("@ 총 가짓수:  %d개", sum);
+	return 0;
+}

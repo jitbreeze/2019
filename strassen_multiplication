@@ -1,0 +1,297 @@
+#include <stdio.h>
+#include <math.h>
+#include <time.h>
+#include <stdlib.h>
+
+int threshold = 2;//임계값을 2로 설정
+long long standard_add = 0;	 //표준행렬 덧셈 count
+long long standard_mul = 0;	 //표준행렬 곱셈 count
+long long strassen_add = 0;	 //strassen 덧셈 count
+long long strassen_mul = 0;	 //strassen 곱셈 count
+
+
+
+void randommatrix(int n, int **matrix) {//배열에 1~5사이 랜덤한 값을 배정하는 함수
+	int r, c;//row와 column 위한 index
+	for (r = 0; r < n; r++)
+	{
+		for (c = 0; c < n; c++)
+		{
+			matrix[r][c] = rand() % 5;
+		}
+	}
+}
+// 1~5사이의 값을 넣은것은 이 배열에 어떤 원소가 들어가는지는 중요하지 않기때문에 임의로 넣은것임
+void freematrix(int n, int **matrix) {//동적으로 할당된 배열을 free해주는 함수
+	int i;
+	for (i = 0; i < n; i++) 
+	{
+		free(matrix[i]);
+	}
+	free(matrix);
+}
+
+void strassen(int n, int **A, int **B, int **C)//strassen multiplication
+{
+	int i, j;//반복문을 위한 index
+	int k, t;
+
+	if (n <= threshold) //n이 임계값보다 작으면 표준행렬 곱셈
+	{
+
+		for (i = 0; i < n; i++)
+			for (j = 0; j < n; j++)
+			{
+				C[i][j] = 0;
+
+				for (k = 0; k < n; k++)
+				{
+					C[i][j] += A[i][k] * B[k][j];
+					strassen_mul++;
+				}
+			}
+		strassen_add += 4;  
+	}
+	else// n이 임계값보다 크면 strassen multiplication
+	{
+		int mid = n / 2;	//분할을 위한 mid값 설정
+		int** m1 = (int**)malloc(sizeof(int*)*mid); // 동적할당 시작
+		int** m2 = (int**)malloc(sizeof(int*)*mid);
+		int** m3 = (int**)malloc(sizeof(int*)*mid);
+		int** m4 = (int**)malloc(sizeof(int*)*mid);
+		int** m5 = (int**)malloc(sizeof(int*)*mid);
+		int** m6 = (int**)malloc(sizeof(int*)*mid);
+		int** m7 = (int**)malloc(sizeof(int*)*mid);
+		int** temp1 = (int**)malloc(sizeof(int*)*mid);
+		int** temp2 = (int**)malloc(sizeof(int*)*mid);
+
+		for (t = 0; t < mid; t++)//이차원 배열을 위한 동적할당
+		{
+
+			m1[t] = (int *)malloc(sizeof(int)*mid);
+			m2[t] = (int *)malloc(sizeof(int)*mid);
+			m3[t] = (int *)malloc(sizeof(int)*mid);
+			m4[t] = (int *)malloc(sizeof(int)*mid);
+			m5[t] = (int *)malloc(sizeof(int)*mid);
+			m6[t] = (int *)malloc(sizeof(int)*mid);
+			m7[t] = (int *)malloc(sizeof(int)*mid);
+			temp1[t] = (int *)malloc(sizeof(int)*mid);
+			temp2[t] = (int *)malloc(sizeof(int)*mid);
+		}
+
+		//이제부터는 재귀를 이용하여 다시 분할한다.
+		//m1
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{
+				temp1[i][j] = 0;
+				temp1[i][j] = A[i][j] + A[i + mid][j + mid];	//a11+a22
+				temp2[i][j] = B[i][j] + B[i + mid][j + mid];	//b11+b12
+				strassen_add += 2;
+			}
+
+		}
+		strassen(mid, temp1, temp2, m1);  
+
+		//m2
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{
+				temp1[i][j] = A[i + mid][j] + A[i + mid][j + mid]; //a21+a22	
+				temp2[i][j] = B[i][j];	//b11
+				strassen_add += 1;
+			}
+		}
+		strassen(mid, temp1, temp2, m2);  
+
+		//m3
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{
+				temp1[i][j] = A[i][j];		//a11
+				temp2[i][j] = B[i][j + mid] - B[i + mid][j + mid]; //b12-b22	
+				strassen_add += 1;
+			}
+		}
+		strassen(mid, temp1, temp2, m3);  
+
+		//m4
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{
+				temp1[i][j] = A[i + mid][j + mid];	//a22
+				temp2[i][j] = B[i + mid][j] - B[i][j];	//b21-b11
+				strassen_add += 1;
+			}
+		}
+		strassen(mid, temp1, temp2, m4);  
+
+		//m5
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{
+				temp1[i][j] = A[i][j] + A[i][j + mid]; //a11+a12
+				temp2[i][j] = B[i + mid][j + mid];		//b22
+				strassen_add += 1;
+			}
+		}
+		strassen(mid, temp1, temp2, m5); 
+
+		//m6
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{
+				temp1[i][j] = A[i + mid][j] - A[i][j];	 //a21+a11
+				temp2[i][j] = B[i][j] + B[i][j + mid];	 //b11+b12
+				strassen_add += 2;
+			}
+
+		}
+		strassen(mid, temp1, temp2, m6);	
+
+		//m7
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{
+				temp1[i][j] = A[i][j + mid] - A[i + mid][j + mid];	//a12-a22
+				temp2[i][j] = B[i + mid][j] + B[i + mid][j + mid];	//b21+b22
+				strassen_add += 2;
+			}
+		}
+		strassen(mid, temp1, temp2, m7);  
+
+		for (i = 0; i < mid; i++)
+		{
+			for (j = 0; j < mid; j++)
+			{	//c11,c12,c21,c22로 분할되었음
+				C[i][j] = m1[i][j] + m4[i][j] - m5[i][j] + m7[i][j];	
+				C[i][j + mid] = m3[i][j] + m5[i][j];	
+				C[i + mid][j] = m2[i][j] + m4[i][j];	
+				C[i + mid][j + mid] = m1[i][j] + m3[i][j] - m2[i][j] + m6[i][j];	
+				strassen_add += 8;
+			}
+		}
+
+		freematrix(mid,temp2);
+		freematrix(mid,temp1);
+		freematrix(mid,m7);
+		freematrix(mid,m6);
+		freematrix(mid,m5);
+		freematrix(mid,m4);
+		freematrix(mid,m3);
+		freematrix(mid,m2);
+		freematrix(mid,m1);
+	}
+}
+
+void standard(int n, int **A, int **B, int **C)//standard multiplication
+{
+	int i, j, k;//반복문을 위한 index
+
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+		{
+			C[i][j] = 0;
+			standard_add++;
+			for (k = 0; k < n; k++)
+			{
+				C[i][j] += A[i][k] * B[k][j];
+				standard_mul++;
+			}
+		}
+
+}
+// standard multiplication 단위연산
+//standard_add=n*n;
+// standard_mul=n*n*n-n*n;
+int main()
+{
+	FILE *fp;//output2.txt에 쓰기위한 포인터
+	fp = fopen("output2.txt", "w");
+
+	int i, j;
+
+
+	int n = 2; 
+
+	long long standard_start;//timestamp starts
+	long long standard_end;//timestamp ends
+	long long strassen_start;
+	long long strassen_end;
+	long long standard_add_data[20];// 각각의 배열에 data값을 모아둔다. fprintf시 이용하려고 하는 목적
+	long long standard_mul_data[20];
+	long long strassen_add_data[20];
+	long long strassen_mul_data[20];
+	long long stand_timestamp[20];
+	long long stras_timestamp[20];
+
+
+	for (i = 1; i <= 10; i++)
+	{
+
+
+		int** A = (int**)malloc(sizeof(int*)*n);
+		int** B = (int**)malloc(sizeof(int*)*n);
+		int** C = (int**)malloc(sizeof(int*)*n);
+
+
+		for (j = 0; j < n; j++)
+		{
+			A[j] = (int*)malloc(sizeof(int*)*n);
+			B[j] = (int*)malloc(sizeof(int*)*n);
+			C[j] = (int*)malloc(sizeof(int*)*n);
+		}
+
+		randommatrix(n, A);//random matrix 생성
+		randommatrix(n, B);
+
+		standard_start = clock();//tic
+		standard(n, A, B, C);
+		standard_end = clock();//toc
+		printf("standard mul count  : %lld\t\t    add count  : %lld\n", standard_mul, standard_mul - standard_add); //곱셈 카운터 출력, 덧셈카운터 출력
+		standard_add_data[i - 1] = standard_mul - standard_add;	
+		standard_mul_data[i - 1] = standard_mul;
+		stand_timestamp[i - 1] = standard_end - standard_start;
+		standard_mul = 0;
+		standard_add = 0;
+
+
+
+		strassen_start = clock();
+		strassen(n, A, B, C);
+		strassen_end = clock();
+		printf("strassen mul count  : %lld\t\t    add count  : %lld\n", strassen_mul, strassen_add);
+		strassen_add_data[i - 1] = strassen_add;	
+		strassen_mul_data[i - 1] = strassen_mul;
+		stras_timestamp[i - 1] = strassen_end - strassen_start;
+		strassen_mul = 0;
+		strassen_add = 0;
+
+		printf("standard : %lld, strassen : %lld\n", standard_end - standard_start, strassen_end - strassen_start);
+		printf("\n\n");
+		if ((standard_end - standard_start) > (strassen_end - strassen_start)) 
+			printf("하한? = %d", n);
+		//하한값의 조건
+
+		freematrix(n,A);//free
+		freematrix(n,B);
+		freematrix(n,C);
+
+		fprintf(fp, " %d           standard         strassen\n", n);
+		fprintf(fp, "------------------------------------------------------------------\n");
+		fprintf(fp, " mul            %lld              %lld\n", standard_mul_data[i - 1], strassen_mul_data[i - 1]);
+		fprintf(fp, " add/sub       %lld              %lld\n", standard_add_data[i - 1], strassen_add_data[i - 1]);
+		fprintf(fp, " time           %lld              %lld\n", stand_timestamp[i - 1], stras_timestamp[i - 1]);
+		fprintf(fp, "==================================================================\n");
+
+		n = n * 2;	
+	}
+	return 0;
+}

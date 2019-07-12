@@ -1,0 +1,57 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+int n;//체스판의 크기를 입력받는 변수
+int sum=0; //총 가짓수를 세기 위한 변수
+
+typedef enum {// c언어는 boolean이 없기때문에 사용자정의 함수로 지정해줌
+	false = 0,
+	true = 1
+
+}bool;
+
+bool promising(int *col, int i) {//유망한지 여부를 판별하는 함수.
+	int k;//while문에서 증가하는 행의 값을 나타내기 위한 변수
+	bool result; // 유명한지의 결과를 나타내는 boolean값, 유망하다면 true가, 유망하지 않다면 false가 반환된다.
+	
+	k = 1;//행은 1행부터 시작함
+	result = true;// 초기화
+	while (k < i && result == true) {//
+		if (col[i] == col[k] || abs(col[i] - col[k]) == i - k) result = false;//같은 열에 체스말이 있고, 대각선에 체스말이 존재한다면 유망하지 않음.
+		k++; //i보다 낮은 수의 행.. 즉 앞선 체스판의 행을 모두 계산함.
+	}
+	return result;
+}
+
+void queens(int *col, int i) {
+	int j,k; //반복문을 위한 index
+
+	if (promising(col,i)) {
+		if (i == n) {
+			sum++;//총 가짓수를 세기 위한 변수
+			printf("%d번째 방법 : ", sum);
+			for (k = 1; k <= n; k++) {
+				printf("%d ", col[k]); //체스판의 크기만큼 말을 놓기위한 조사를 끝낸다는 의미로 어떤 열에 말을 놔야하는지 print
+			}
+			printf("\n");
+		}
+		else {
+			for (j = 1; j <= n; j++) {
+				col[i + 1] = j; // 유망한 행i 의 다음행(i+1)에 대한 열의 값을 1부터 순서대로 배정. 
+				queens(col, i + 1); //그 현재의 행i의 다음행(i+1)이 유망한지 재귀로 판별 
+			}
+		}
+	}
+}
+
+
+
+int main() {
+	printf("체스판의 크기를 입력하세요\n");
+	scanf("%d", &n);
+	int *col = (int *)malloc(sizeof(int)*(n + 1)); //체스판의 인덱스가 1부터 시작하므로 체스판의 크기 n보다 하나 더 할당해줌
+	printf("@ n=%d 인 경우\n", n);
+	queens(col, 0);
+	printf("@ 총 가짓수 : %d", sum);
+	return 0;
+}

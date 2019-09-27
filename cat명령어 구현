@@ -1,0 +1,83 @@
+//option -b numbering line numbers if blank line-> do not numbering
+//option -s combine several blank lines into single line
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define  MAX 2048
+typedef enum {
+	false = 0,
+	true=1
+}bool;
+
+bool checkblank(char line[MAX]){
+	int i;;
+	for(i=0;i<strlen(line);i++){
+		if(line[i]!=' ' && line[i] != '\t' && line[i]!= '\n') return false;
+	}
+}
+
+void optionb(FILE *fp){
+	char line[MAX];
+	int i=1;
+	while(fgets(line, MAX, fp) != NULL){
+		if(!checkblank(line) ){
+			printf("     %d\t\t" ,i);
+			printf("%s", line);
+			i++;
+		}
+		else printf("\n");
+	}
+}
+void options(FILE *fp){
+	char line[MAX];
+	int linecheck=0;
+	while(fgets(line, MAX, fp) != NULL){
+		if(!checkblank(line)){
+			linecheck=0;
+			printf("%s", line);
+		}
+		else{
+			if(linecheck==0) printf("\n");
+			else continue;
+			linecheck++;
+		}
+	}
+}
+void view_file(FILE *fp) {
+	int	c;
+	while((c = getc(fp)) != EOF)
+		putc('c', stdout);
+}
+void fatal(char *error_name) {
+	perror(error_name);
+	exit(1);
+}
+
+main(int argc, char *argv[]) {
+	void	view_file(FILE *);
+	void	fatal(char *);
+	FILE	*fp;
+	int 	choice=0;
+	if(argc == 1) {
+		puts("사용법 : a.out file_name");
+		exit(0);
+	}
+	else	*argv++;
+	
+	if(!strcmp(*argv,"-b")) {*argv++; choice = 1;}
+	if(!strcmp(*argv,"-s")) {*argv++; choice = 2;}
+
+	do	{
+		if(*argv) {
+			puts(*argv);
+			if((fp = fopen(*argv, "r")) == NULL) fatal("fopen");
+			else if(choice==1)optionb(fp);
+			else if(choice==2)options(fp);
+			else view_file(fp);
+			fclose(fp);
+		}
+		*argv++;
+	} while(*argv);
+	printf("\n");
+}

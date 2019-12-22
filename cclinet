@@ -1,0 +1,52 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#define DEFAULT_PROTOCOL 0
+#define MAXLINE 100
+void clear_stdin() {
+	int ch;
+	while ((ch = getchar()) != EOF && ch != '\n') {};
+}
+int main(){
+	int clientfd, result,n;
+	char inmsg[MAXLINE], outmsg[MAXLINE];
+	struct sockaddr_un serverAddr;
+	memset(&serverAddr,0, sizeof(serverAddr));
+	
+	clientfd = socket(AF_UNIX, SOCK_STREAM, DEFAULT_PROTOCOL);
+	serverAddr.sun_family = AF_UNIX;
+	strcpy(serverAddr.sun_path, "convert" );
+	unlink("convert");
+	
+	do{
+		result = connect(clientfd, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+		if(result == -1) sleep(1);
+	}while(result == -1);
+	
+
+	
+		while(1){
+			printf("반환할 문자열 입력:");
+			fgets(inmsg, MAXLINE, stdin);
+			if(strncmp(inmsg,":exit",5)==0){
+				printf("Disconnected from server\n");
+				write(clientfd,inmsg,strlen(inmsg));
+				exit(0);
+				break;
+			}
+			write(clientfd, inmsg, strlen(inmsg));
+			fputs(inmsg,stdout);
+			printf("-->\n");
+			n=read(clientfd,outmsg,strlen(inmsg));
+			outmsg[n]='\0';
+			fputs(outmsg,stdout);
+			fflush(stdout);
+		}
+	
+	close(clientfd);
+	return 0;
+}

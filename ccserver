@@ -1,0 +1,63 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#define DEFAULT_PROTOCOL 0
+#define MAXLINE 100
+void clear_stdin() {
+	int ch;
+	while ((ch = getchar()) != EOF && ch != '\n') {};
+}
+void signal_handler(int signo){
+	int stat;
+	pid_t pid;
+	while((pid=waitpid(-1,&stat,WNOHANG))>0){
+		printf("Disconnected from [%d]\n",pid);
+	}
+}
+toUpper(char * in, char * out){
+	int i;
+	for(i=0;i<strlen(in);i++)
+		if(islower(in[i])) out[i] = toupper(in[i]);
+		else out[i] = in[i];
+	out[i] = '\0';
+}
+
+int main(){
+	int listenfd, connfd,clientlen;
+	ssize_t n;
+	char inmsg[MAXLINE], outmsg[MAXLINE];
+	struct sockaddr_un serverAddr, clientAddr;
+	
+	signal(SIGCHLD, SIG_IGN);
+	clientlen = sizeof(clientAddr);
+	
+	listenfd = socket(AF_UNIX, SOCK_STREAM, DEFAULT_PROTOCOL);
+	serverAddr.sun_family = AF_UNIX;
+	strcpy(serverAddr.sun_path, "convert" );
+	unlink("convert");
+	bind(listenfd, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+	
+	listen(listenfd, 5);
+	signal(SIGCHLD,signal_handler);
+	while((connfd = accept(listenfd, (struct sockaddr *) &clientAddr, &clientlen))>=0){
+		if(fork() == 0){	
+			close(listenfd);
+			while((n=read(connfd, inmsg, MAXLINE))>0){
+				if(strncmp(inmsg,":exit",5)==0){
+					exit(0);
+				}
+				toUpper(inmsg,outmsg);
+				//fputs(outmsg,stdout);
+				write(connfd,outmsg,strlen(outmsg));
+			}	
+			close(connfd);
+			exit(0);
+		}else close(connfd);
+ 	}	
+	close(listenfd);
+	return 0;
+}

@@ -1,0 +1,161 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include "student.h"
+
+int main(int argc, char *argv[]){
+	int fd,id,i;
+	struct student record;
+	int choose=1;
+	char c;
+	int find, checkremove;
+	
+	if (argc < 2) {
+		fprintf(stderr, "사용법 : %s file\n", argv[0]);
+		exit(1);
+	}
+	
+	while(choose<5){
+		printf("****** 학생관리 프로그램 *******\n");
+		printf("0. 학생 목록보기\n");
+		printf("1. 학생 자료 입력\n");
+		printf("2. 학생 검색\n");
+		printf("3. 학생 자료 수정\n");
+		printf("4. 학생 자료 삭제\n");
+		printf("5. 프로그램 종료\n");
+		
+		printf("작업할 번호를 선택하세요 : ");
+		scanf("%d",&choose);
+			
+		switch(choose){
+			case 0:
+				if ((fd = open(argv[1], O_RDWR)) == -1) {
+					perror(argv[1]);
+					exit(2);
+				}
+				while(read(fd,(char *)&record,sizeof(record))>0) {
+					if(record.id !=0 ) {
+						printf("이름 : %s\t  학번 : %d\t 점수 : %d \n " , record.name , record.id , record.score);
+					}
+				}
+				close(fd);
+				break;				
+			case 1: //입력
+				if( access( argv[1], F_OK ) != -1 ) {// file exists
+					if ((fd = open(argv[1], O_APPEND| O_WRONLY, 0640)) == -1) {
+					perror(argv[1]);
+					exit(2);
+					}
+				} 
+				else {// file doesn't exist
+					if ((fd = open(argv[1], O_WRONLY|O_CREAT|O_EXCL, 0640)) == -1) {
+					perror(argv[1]);
+					exit(2);
+					}
+				}
+				
+				printf("%-9s %-8s %-4s\n", "학번", "이름", "점수");
+				while (scanf("%d %s %d", &record.id, record.name, &record.score) == 3){
+					lseek(fd, (record.id - START_ID) * sizeof(record), SEEK_SET);
+					write(fd, (char *) &record, sizeof(record) );
+				}
+				close(fd);
+				break;
+			
+			case 2: //검색
+					do{
+						if ((fd = open(argv[1], O_RDONLY)) == -1) {
+							perror(argv[1]);
+							exit(2);
+						}
+						find=0;
+						printf("\n검색할 학생의 학번 입력:");
+						if (scanf("%d", &id) == 1) {
+							while(read(fd,(char *)&record,sizeof(record))>0) {
+								/*if(record.id == '\0')
+								lseek(fd,sizeof(record),SEEK_CUR);
+								*/
+								if(record.id == id){ 
+									printf("이름 : %s\t  학번 : %d\t 점수 : %d \n " , record.name , record.id , record.score);
+									find=1;
+								}
+							}
+						}
+						else printf("입력 오류");
+						if(find==0) printf("레코드 %d 없음\n", id);
+						printf("계속하겠습니까?(Y/N)");
+						scanf(" %c", &c);
+					} while (c=='Y');
+					close(fd);
+					break;
+					
+			case 3:
+				do {
+					if ((fd = open(argv[1], O_RDWR)) == -1) {
+						perror(argv[1]);
+						exit(2);
+					}				
+					find=0;
+					printf("수정할 학생의 학번 입력: ");
+					if (scanf("%d", &id) == 1) {
+						lseek(fd, (record.id - START_ID) * sizeof(record), SEEK_SET);
+						whlie(read(fd,(char *)&record,sizeof(record))>0) {
+							if(record.id==id){
+								//lseek(fd, (record.id - START_ID) * sizeof(record), SEEK_SET);
+								printf("학번:%8d\t 이름:%4s\t 점수:%4d\n",record.id, record.name, record.score);
+								printf("새로운 점수: ");
+								scanf("%d", &record.score);
+								lseek(fd, (long) -sizeof(record), SEEK_CUR);
+								write(fd, (char *) &record, sizeof(record));
+								find=1;
+								break;
+							}
+						} 
+					} 
+					else printf("입력오류\n");
+					if(find==0) printf("레코드 %d 없음\n", id);
+					printf("계속하겠습니까?(Y/N)");
+					scanf(" %c",&c);
+				} while (c == 'Y');
+				close(fd);
+				break;
+				
+			case 4:
+					do{
+						if ((fd = open(argv[1], O_RDWR )) =[= -1) {
+							perror(argv[1]);
+							exit(2);
+						}
+						find=0;
+						checkremove=0;
+						printf("\n삭제할 학생의 학번 입력:");
+						if (scanf("%d", &id) == 1) {
+							while(read(fd,(char *)&record,sizeof(record))>0) {
+								if(record.id == id){ 
+									//lseek(fd, (record.id - START_ID) * sizeof(record), SEEK_SET);
+									record.id = '\0';
+									lseek(fd, (long) -sizeof(record), SEEK_CUR);
+									write(fd, (char *) &record, sizeof(record));
+									find=1;
+									printf("학번이 %d인 학생의 레코드가 삭제되었습니다.",id);
+									break;
+								}
+								if(record.id!=0) checkremove=1;
+							}
+						}
+						else printf("입력 오류");
+						if(find==0) printf("레코드 %d 없음\n", id);
+						printf("계속하겠습니까?(Y/N)");
+						scanf(" %c", &c);
+					} while (c=='Y');
+					close(fd);
+					if(checkremove==0) {
+						remove(argv[1]);
+					}
+					break;		
+		}
+	}
+	close(fd);
+}
